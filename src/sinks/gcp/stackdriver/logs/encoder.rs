@@ -75,6 +75,9 @@ impl StackdriverLogsEncoder {
             .map(remap_severity)
             .unwrap_or_else(|| 0.into());
 
+        let trace_id_key = "traceId";
+        let trace_id = log.remove((PathPrefix::Event, trace_id_key));
+
         let mut event = Event::Log(log);
         self.transformer.transform(&mut event);
 
@@ -97,6 +100,14 @@ impl StackdriverLogsEncoder {
             entry.insert("timestamp".into(), json!(timestamp));
         }
 
+        if let Some(trace_id) = trace_id {
+            let value = self.formatted_trace_id(&trace_id.to_string());
+            if let Some(value) = value {
+                entry.insert("logging.googleapis.com/trace".into(), json!(value));
+                entry.insert("logging.googleapis.com/trace_sampled".into(), json!(true));
+            }
+        }
+
         Some(json!(entry))
     }
 
@@ -111,6 +122,17 @@ impl StackdriverLogsEncoder {
             Organization(org) => format!("organizations/{}/logs/{}", org, log_id),
             Project(project) => format!("projects/{}/logs/{}", project, log_id),
         })
+    }
+
+    fn formatted_trace_id(&self, trace_id: &String) -> Option<String> {
+        use StackdriverLogName::*;
+
+        match &self.log_name {
+            BillingAccount(_) => None,
+            Folder(_) => None,
+            Organization(_) => None,
+            Project(project) => Some(format!("projects/{}/traces/{}", project, trace_id)),
+        }
     }
 }
 
