@@ -75,8 +75,8 @@ impl StackdriverLogsEncoder {
             .map(remap_severity)
             .unwrap_or_else(|| 0.into());
 
-        let trace_id_key = "traceId".into();
-        let trace_id = log.remove((PathPrefix::Event, &trace_id_key));
+        let trace_id_key = "traceId";
+        let trace_id = log.remove((PathPrefix::Event, trace_id_key));
 
         let mut event = Event::Log(log);
         self.transformer.transform(&mut event);
